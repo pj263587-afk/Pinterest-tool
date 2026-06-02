@@ -1,4 +1,4 @@
-# Pinterest Tool
+# Pinterest Tool.html
 
 A smart tool that generates SEO-optimized titles, descriptions, alt text, keywords for Pinterest pins + resizes images for perfect pin size.
 
