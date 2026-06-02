@@ -1,0 +1,114 @@
+const ImageResizer = ({ showToast }) => {
+    const [originalImage, setOriginalImage] = useState(null);
+    const [resizedImage, setResizedImage] = useState(null);
+    const [quality, setQuality] = useState(85);
+    const [email, setEmail] = useState('');
+    const [showEmailGate, setShowEmailGate] = useState(false);
+    const fileInputRef = useRef(null);
+
+    const handleImageUpload = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                setOriginalImage(img);
+                const canvas = document.createElement('canvas');
+                canvas.width = 1000; canvas.height = 1500;
+                canvas.getContext('2d').drawImage(img, 0, 0, 1000, 1500);
+                setResizedImage(canvas.toDataURL('image/jpeg', quality/100));
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const downloadImage = () => {
+        if (!resizedImage) return showToast('Upload image first!', 'error');
+        const link = document.createElement('a');
+        link.download = 'pinterest-pin.jpg';
+        link.href = resizedImage;
+        link.click();
+        showToast('Downloaded! 📌');
+    };
+
+    const handleDownloadClick = () => {
+        if (!email) {
+            setShowEmailGate(true); // Email nahi hai to popup khulega
+        } else {
+            downloadImage(); // Email hai to seedha download
+        }
+    };
+
+    const saveEmail = async () => {
+        if (!email.includes('@')) return showToast('Valid email dalo!', 'error');
+
+        // MailerLite free API - Yahan apna API key dalna
+        try {
+            await fetch('https://connect.mailerlite.com/api/subscribers', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer TUMHARA_MAILERLITE_API_KEY'
+                },
+                body: JSON.stringify({
+                    email: email,
+                    fields: { source: 'Pinterest Tool 2026' }
+                })
+            });
+            localStorage.setItem('userEmail', email); // Dubara email na maange
+            setShowEmailGate(false);
+            downloadImage();
+            showToast('Email saved! Downloading...');
+        } catch (err) {
+            showToast('Email save nahi hui, phir try karo', 'error');
+        }
+    };
+
+    // Page load pe check karo email save hai ya nahi
+    useEffect(() => {
+        const savedEmail = localStorage.getItem('userEmail');
+        if (savedEmail) setEmail(savedEmail);
+    }, []);
+
+    return (
+        <div className="space-y-6">
+            <div className="border-2 border-dashed border-gray-600 rounded-lg p-8 text-center">
+                <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" className="hidden" />
+                <i className="fas fa-cloud-upload-alt text-5xl text-pink-500 mb-4"></i>
+                <button onClick={() => fileInputRef.current.click()} className="pinterest-gradient text-white px-6 py-2 rounded-lg">Choose Image</button>
+            </div>
+
+            {resizedImage && (
+                <>
+                    <img src={resizedImage} className="w-full rounded-lg safe-zone" alt="Resized" />
+                    <button onClick={handleDownloadClick} className="pinterest-gradient text-white px-6 py-3 rounded-lg w-full font-semibold">
+                        Download Pin 1000x1500
+                    </button>
+                </>
+            )}
+
+            {/* Email Popup Gate */}
+            {showEmailGate && (
+                <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4">
+                    <div className="bg-gray-900 p-6 rounded-xl max-w-md w-full border-gray-700">
+                        <h3 className="text-2xl font-bold mb-2 text-center pinterest-gradient bg-clip-text text-transparent">Free Pin + Bonus 🎁</h3>
+                        <p className="text-gray-400 text-sm mb-4 text-center">Email dalo aur pao:<br/>1. Ye pin HD me<br/>2. 5 Free AI Title Templates</p>
+                        <input
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            placeholder="your@email.com"
+                            className="w-full bg-gray-800 border-gray-600 rounded-lg px-4 py-3 mb-3 text-white focus:border-pink-500 outline-none"
+                        />
+                        <button onClick={saveEmail} className="pinterest-gradient text-white px-6 py-3 rounded-lg w-full font-bold">
+                            Get Download Link
+                        </button>
+                        <p className="text-xs text-gray-500 mt-3 text-center">No spam. Unsubscribe anytime.</p>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
